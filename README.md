@@ -13,3 +13,27 @@ The automatic door controller should:
 5. Include safety features to prevent closing when obstructed
 
 
+                    +-------------------+
+                    |  Motion Sensor    |
+                    +---------+---------+
+                              |
+                    +---------v---------+
+                    |   Sensor Interface |
+                    +---------+---------+
+                              |
+                    +---------v---------+
+                    |   Control Logic   |
+                    +---------+---------+
+                              |
+                    +---------v---------+
+                    |  Timer/Counter    |
+                    +---------+---------+
+                              |
+                    +---------v---------+
+                    |  Door Motor Driver|
+                    +---------+---------+
+                              |
+                    +---------v---------+
+                    |  Obstruction      |
+                    |  Sensor          |
+                    +-------------------+
