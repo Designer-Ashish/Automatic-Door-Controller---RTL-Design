@@ -1,1 +1,1 @@
-# Automatic-Door-Controller---RTL-Design
+# Automatic_Door_Controller-RTL_Design
