@@ -2,14 +2,14 @@
 # Specifications
 The automatic door controller should:
 
-Detect approaching persons using motion sensors
+1. Detect approaching persons using motion sensors
 
-Open the door when a person is detected
+2. Open the door when a person is detected
 
-Keep the door open as long as movement continues to be detected
+3. Keep the door open as long as movement continues to be detected
 
-Close the door after a timeout period when no more movement is detected
+4. Close the door after a timeout period when no more movement is detected
 
-Include safety features to prevent closing when obstructed
+5. Include safety features to prevent closing when obstructed
 
 
