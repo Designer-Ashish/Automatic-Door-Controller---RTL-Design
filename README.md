@@ -1,5 +1,5 @@
-Automatic_Door_Controller-RTL_Design
-Specifications
+# Automatic_Door_Controller-RTL_Design
+# Specifications
 The automatic door controller should:
 
 Detect approaching persons using motion sensors
