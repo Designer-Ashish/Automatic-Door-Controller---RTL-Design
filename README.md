@@ -1,18 +1,21 @@
-# Automatic_Door_Controller-RTL_Design
-# Specifications
-The automatic door controller should:
+# Automatic Door Controller - RTL Design
 
-1. Detect approaching persons using motion sensors
+## Overview
 
-2. Open the door when a person is detected
+This repository contains a Register Transfer Level (RTL) design for an automatic door controller implemented in Verilog. The controller manages door operation based on motion detection and includes safety features to prevent closing when obstructions are present.
 
-3. Keep the door open as long as movement continues to be detected
+## Features
 
-4. Close the door after a timeout period when no more movement is detected
+- Motion-activated door opening
+- Configurable timeout period before closing
+- Obstruction detection safety mechanism
+- Finite State Machine (FSM) based control logic
+- Edge detection for motion sensor inputs
+- Synthesizable Verilog RTL code
 
-5. Include safety features to prevent closing when obstructed
+## Block Diagram
 
-
+```
                     +-------------------+
                     |  Motion Sensor    |
                     +---------+---------+
@@ -37,194 +40,51 @@ The automatic door controller should:
                     |  Obstruction      |
                     |  Sensor          |
                     +-------------------+
+```
 
-# RTL Implementation (Verilog)
+## Files
 
-module automatic_door_controller (
-    input wire clk,            // System clock
-    input wire reset_n,        // Active-low reset
-    input wire motion_sensor,  // Motion detection (1 = motion detected)
-    input wire obstruction,    // Obstruction sensor (1 = obstruction present)
-    output reg door_open,      // Door control (1 = open, 0 = closed)
-    output reg door_close      // Door control (1 = close, 0 = stop)
-);
+- `automatic_door_controller.v` - Main RTL design file
+- `automatic_door_tb.v` - Testbench for simulation
+- `README.md` - This documentation file
 
-    // Parameters
-    parameter TIMEOUT = 32'd50000000; // 1 second timeout @ 50MHz clock
-    
-    // Internal signals
-    reg [31:0] timeout_counter;
-    reg motion_detected;
-    
-    // Edge detection for motion sensor
-    reg motion_prev;
-    always @(posedge clk or negedge reset_n) begin
-        if (!reset_n) begin
-            motion_prev <= 1'b0;
-            motion_detected <= 1'b0;
-        end else begin
-            motion_prev <= motion_sensor;
-            motion_detected <= motion_sensor & !motion_prev;
-        end
-    end
-    
-    // Main control FSM
-    reg [1:0] state;
-    localparam IDLE      = 2'b00;
-    localparam OPENING   = 2'b01;
-    localparam OPEN      = 2'b10;
-    localparam CLOSING   = 2'b11;
-    
-    always @(posedge clk or negedge reset_n) begin
-        if (!reset_n) begin
-            state <= IDLE;
-            door_open <= 1'b0;
-            door_close <= 1'b0;
-            timeout_counter <= 32'b0;
-        end else begin
-            case (state)
-                IDLE: begin
-                    door_open <= 1'b0;
-                    door_close <= 1'b0;
-                    if (motion_detected) begin
-                        state <= OPENING;
-                        door_open <= 1'b1;
-                    end
-                end
-                
-                OPENING: begin
-                    // Wait for door to fully open (simplified)
-                    // In real implementation, would wait for limit switch
-                    state <= OPEN;
-                    timeout_counter <= TIMEOUT;
-                end
-                
-                OPEN: begin
-                    door_open <= 1'b0; // Stop opening command
-                    
-                    if (motion_detected) begin
-                        // Reset timeout if motion detected again
-                        timeout_counter <= TIMEOUT;
-                    end else if (timeout_counter > 0) begin
-                        timeout_counter <= timeout_counter - 1;
-                    end else begin
-                        if (!obstruction) begin
-                            state <= CLOSING;
-                            door_close <= 1'b1;
-                        end
-                    end
-                end
-                
-                CLOSING: begin
-                    if (obstruction || motion_detected) begin
-                        // Stop closing if obstruction or new motion detected
-                        state <= OPEN;
-                        door_close <= 1'b0;
-                        timeout_counter <= TIMEOUT;
-                    end
-                    // Wait for door to fully close (simplified)
-                    // In real implementation, would wait for limit switch
-                    else begin
-                        state <= IDLE;
-                        door_close <= 1'b0;
-                    end
-                end
-            endcase
-        end
-    end
+## Parameters
 
-endmodule
+The design includes the following configurable parameter:
+- `TIMEOUT` - Sets the delay before door closing (default = 50,000,000 cycles @ 50MHz = 1 second)
 
-# Testbench
+## States
 
-module automatic_door_tb;
-    reg clk;
-    reg reset_n;
-    reg motion_sensor;
-    reg obstruction;
-    wire door_open;
-    wire door_close;
-    
-    automatic_door_controller dut (
-        .clk(clk),
-        .reset_n(reset_n),
-        .motion_sensor(motion_sensor),
-        .obstruction(obstruction),
-        .door_open(door_open),
-        .door_close(door_close)
-    );
-    
-    // Clock generation
-    initial begin
-        clk = 0;
-        forever #10 clk = ~clk;
-    end
-    
-    // Test sequence
-    initial begin
-        // Initialize
-        reset_n = 0;
-        motion_sensor = 0;
-        obstruction = 0;
-        
-        // Reset
-        #20 reset_n = 1;
-        
-        // Test 1: Normal operation
-        #30 motion_sensor = 1;  // Detect motion
-        #20 motion_sensor = 0;
-        #1000;                // Wait for timeout
-        
-        // Test 2: Motion during closing
-        motion_sensor = 1;     // Detect motion again
-        #20 motion_sensor = 0;
-        #500;                  // Wait partial timeout
-        motion_sensor = 1;     // Detect motion again
-        #20 motion_sensor = 0;
-        #1000;                // Wait for timeout
-        
-        // Test 3: Obstruction during closing
-        motion_sensor = 1;     // Detect motion
-        #20 motion_sensor = 0;
-        #1000;                // Wait for timeout
-        obstruction = 1;       // Create obstruction
-        #100;
-        obstruction = 0;
-        
-        #1000 $finish;
-    end
-    
-    initial begin
-        $dumpfile("door_controller.vcd");
-        $dumpvars(0, automatic_door_tb);
-    end
-endmodule
+The controller implements a 4-state FSM:
+1. **IDLE** - Door closed, waiting for motion
+2. **OPENING** - Door is opening
+3. **OPEN** - Door is open (waiting for timeout or new motion)
+4. **CLOSING** - Door is closing (can be interrupted by motion or obstruction)
 
-# Implementation Notes
-Clock Frequency: The design assumes a 50MHz clock (20ns period). The timeout value of 50,000,000 cycles corresponds to 1 second.
+## Simulation
 
-Motion Detection: The design includes edge detection to identify new motion events.
+To run the testbench:
+```bash
+iverilog -o sim automatic_door_tb.v automatic_door_controller.v
+vvp sim
+gtkwave door_controller.vcd
+```
 
-Safety Features:
+## Synthesis
 
-The door won't close if an obstruction is detected
+The design is synthesizable for FPGA or ASIC implementation. For synthesis:
+1. Add to your project in your preferred EDA tool (Vivado, Quartus, etc.)
+2. Set appropriate timing constraints
+3. Map I/O to physical pins for your target hardware
 
-Any new motion detection while closing will reopen the door
+## Future Enhancements
 
-Real-world Considerations:
+1. Add limit switch inputs for precise door position detection
+2. Implement PWM control for smoother motor operation
+3. Add energy-saving "partially open" state
+4. Include time-of-day based operation modes
+5. Add emergency override controls
 
-In a real implementation, you would need limit switches to detect fully open/closed positions
+## License
 
-The motor driver would likely use PWM for smooth operation
-
-Additional debouncing might be needed for sensors
-
-Possible Enhancements:
-
-Add a "partially open" state for energy savings
-
-Implement variable timeout based on time of day
-
-Add emergency open/close controls
-
-This RTL design provides a solid foundation for an automatic door controller that can be synthesized for an FPGA or ASIC implementation.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
